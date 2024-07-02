@@ -2,39 +2,48 @@
 import ncs
 from ncs.application import Service
 
-
-# ------------------------
-# SERVICE CALLBACK EXAMPLE
-# ------------------------
 class ServiceCallbacks(Service):
 
-    # The create() callback is invoked inside NCS FASTMAP and
-    # must always exist.
     @Service.create
     def cb_create(self, tctx, root, service, proplist):
         self.log.info('Service create(service=', service._path, ')')
 
         vars = ncs.template.Variables()
-        vars.add('DUMMY', '127.0.0.1')
         template = ncs.template.Template(service)
-        template.apply('l3vpn_cfs-template', vars)
+        for endpoint in service.endpoint:
+            # PE part
+            name = "L3VPN-"+str(endpoint.pe_device)+"-"+str(endpoint.id)
+            vars.add('name', name)
+            vars.add('pe_device', endpoint.pe_device)
+            # vars.add('as_number', endpoint.as_number)
+            # vars.add('remote_as_number', endpoint.customer_as_number)
+            vars.add('cpe_interface_address', endpoint.cpe_interface.ipv4_address)
+            vars.add('pe_interface_name', endpoint.pe_interface.interface_name)
+            vars.add('pe_interface_number', endpoint.pe_interface.interface_number)
+            pe_interface_description = "L3VPN interface to " + str(endpoint.cpe_device) + ", interface " + str(endpoint.cpe_interface.interface_name) + str(endpoint.cpe_interface.interface_number)
+            vars.add('pe_interface_description', pe_interface_description)
+            # vars.add('pe_interface_description', endpoint.pe_interface.interface_description)
+            vars.add('pe_ipv4_address', endpoint.pe_interface.ipv4_address)
+            vars.add('pe_ipv4_mask', endpoint.pe_interface.ipv4_mask)
+            template.apply('l3vpn_pe-template', vars)
 
-    # The pre_modification() and post_modification() callbacks are optional,
-    # and are invoked outside FASTMAP. pre_modification() is invoked before
-    # create, update, or delete of the service, as indicated by the enum
-    # ncs_service_operation op parameter. Conversely
-    # post_modification() is invoked after create, update, or delete
-    # of the service. These functions can be useful e.g. for
-    # allocations that should be stored and existing also when the
-    # service instance is removed.
-
-    # @Service.pre_modification
-    # def cb_pre_modification(self, tctx, op, kp, root, proplist):
-    #     self.log.info('Service premod(service=', kp, ')')
-
-    # @Service.post_modification
-    # def cb_post_modification(self, tctx, op, kp, root, proplist):
-    #     self.log.info('Service postmod(service=', kp, ')')
+            # CPE part
+            name = "L3VPN-"+str(endpoint.cpe_device)+"-"+str(endpoint.id)
+            vars.add('name', name)
+            vars.add('cpe_device', endpoint.cpe_device)
+            # vars.add('remote_as_number', endpoint.as_number)
+            # vars.add('as_number', endpoint.customer_as_number)
+            vars.add('pe_interface_address', endpoint.pe_interface.ipv4_address)
+            vars.add('cpe_loopback0_address', endpoint.cpe_loopback0_address)
+            vars.add('cpe_loopback0_mask', '255.255.255.255')
+            vars.add('cpe_interface_name', endpoint.cpe_interface.interface_name)
+            vars.add('cpe_interface_number', endpoint.cpe_interface.interface_number)
+            cpe_interface_description = "L3VPN interface to " + str(endpoint.pe_device) + ", interface " + str(endpoint.pe_interface.interface_name) + str(endpoint.pe_interface.interface_number)
+            vars.add('cpe_interface_description', cpe_interface_description)
+            # vars.add('cpe_interface_description', endpoint.cpe_interface.interface_description)
+            vars.add('cpe_ipv4_address', endpoint.cpe_interface.ipv4_address)
+            vars.add('cpe_ipv4_mask', endpoint.cpe_interface.ipv4_mask)
+            template.apply('l3vpn_cpe-template', vars)
 
 
 # ---------------------------------------------
@@ -42,24 +51,8 @@ class ServiceCallbacks(Service):
 # ---------------------------------------------
 class Main(ncs.application.Application):
     def setup(self):
-        # The application class sets up logging for us. It is accessible
-        # through 'self.log' and is a ncs.log.Log instance.
         self.log.info('Main RUNNING')
-
-        # Service callbacks require a registration for a 'service point',
-        # as specified in the corresponding data model.
-        #
         self.register_service('l3vpn_cfs-servicepoint', ServiceCallbacks)
 
-        # If we registered any callback(s) above, the Application class
-        # took care of creating a daemon (related to the service/action point).
-
-        # When this setup method is finished, all registrations are
-        # considered done and the application is 'started'.
-
     def teardown(self):
-        # When the application is finished (which would happen if NCS went
-        # down, packages were reloaded or some error occurred) this teardown
-        # method will be called.
-
         self.log.info('Main FINISHED')
