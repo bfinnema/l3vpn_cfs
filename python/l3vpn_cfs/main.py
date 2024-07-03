@@ -45,6 +45,15 @@ class ServiceCallbacks(Service):
             vars.add('cpe_ipv4_mask', endpoint.cpe_interface.ipv4_mask)
             template.apply('l3vpn_cpe-template', vars)
 
+            if endpoint.qos.enable_qos_policy:
+                pe_bit_rate = endpoint.qos.bit_rate
+                cpe_bit_rate = 1000 * endpoint.qos.bit_rate
+                vars.add('pe_bit_rate', pe_bit_rate)
+                vars.add('cpe_bit_rate', cpe_bit_rate)
+                name = "L3VPN-QoS-"+str(endpoint.pe_device)+"-"+str(endpoint.id)
+                template.apply('l3vpn_pe_qos-template', vars)
+                name = "L3VPN-QoS-"+str(endpoint.cpe_device)+"-"+str(endpoint.id)
+                template.apply('l3vpn_cpe_qos-template', vars)
 
 # ---------------------------------------------
 # COMPONENT THREAD THAT WILL BE STARTED BY NCS.

@@ -114,6 +114,24 @@ module l3vpn_cfs {
       container cpe_interface {
         uses interface_grouping;
       }
+
+      container qos {
+        leaf enable_qos_policy {
+          type boolean;
+          default false;
+        }
+
+        leaf bit_rate {
+          tailf:info "Bitrate for shaping in Kbps";
+          type enumeration {
+            enum 256;
+            enum 512;
+            enum 1024;
+            enum 10240;
+          }
+          default 1024;
+        }
+      }
     }
   }
 }
